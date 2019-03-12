@@ -486,14 +486,14 @@ func (bc *blockchain) processHeader(h coin.Header) (*processedHeader, error) {
 			return nil, err
 		}
 
-		if h.Difficulty < prevHeader.NextDifficulty {
+		if h.Difficulty != prevHeader.NextDifficulty {
 			return nil, ErrDifficulty
 		}
 
 		newHeader := &processedHeader{
 			Header:          h,
 			BlockHeight:     prevHeader.BlockHeight + 1,
-			TotalDifficulty: prevHeader.TotalDifficulty + h.Difficulty,
+			TotalDifficulty: prevHeader.TotalDifficulty + prevHeader.NextDifficulty,
 			NextDifficulty:  prevHeader.NextDifficulty,
 		}
 

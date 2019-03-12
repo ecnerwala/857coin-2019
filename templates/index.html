@@ -75,6 +75,7 @@ href="/block/7d2034a21cf5ed6642260567e661a3b063a59c8551eab5f2118588f79554c325" c
 <li><code>B.parentid</code> is the SHA256 Hash of a header in the blockchain.</li>
 <li><code>B.root</code> is the SHA256 hash of the block contents.</li>
 <li><code>B.difficulty >= MinimumDifficulty = 86</code>.</li>
+<li><code>B.difficulty</code> must equal the provided target difficulty.</li>
 <li><code>B.timestamp</code> must be less than 2 minutes off from server.</li>
 <li><code>i != j</code> and the hamming distance <code>Dist(A(i) + B(j) mod 2<sup>128</sup>, A(j) + B(i) mod 2<sup>128</sup>) <= 128 - B.difficulty</code>.
 </ul>
