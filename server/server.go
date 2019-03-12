@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"../coin"
+	"github.com/ecnerwala/857coin-2019/coin"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 

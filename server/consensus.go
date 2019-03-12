@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"../coin"
+	"github.com/ecnerwala/857coin-2019/coin"
 	db "github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )

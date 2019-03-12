@@ -4,7 +4,7 @@ import (
 	"flag"
 	"runtime"
 
-	"./server"
+	"github.com/ecnerwala/857coin-2019/server"
 )
 
 var (

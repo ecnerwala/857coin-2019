@@ -15,7 +15,6 @@ This project was started by David back in 2015.
 1. Install:
    
         $ git clone https://github.com/ecnerwala/857coin-2019.git
-        $ go get github.com/syndtr/goleveldb/...
 
 2. Create required directories:
 
