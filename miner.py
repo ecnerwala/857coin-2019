@@ -1,4 +1,4 @@
-import urllib2
+#!/usr/bin/env python3
 import json
 from hashlib import sha256 as H
 from Crypto.Cipher import AES
@@ -7,7 +7,8 @@ import time
 from struct import pack, unpack
 import requests
 
-NODE_URL = "http://6857coin.csail.mit.edu"
+#NODE_URL = "http://6857coin.csail.mit.edu"
+NODE_URL = "http://localhost:8080"
 
 """
     This is a bare-bones miner compatible with 6857coin, minus the final proof of
@@ -41,6 +42,10 @@ def solve_block(b):
         #   Parse the ciphers as big-endian unsigned integers
         Ai, Aj, Bi, Bj = [unpack_uint128(cipher) for cipher in ciphers]
         #   TODO: Verify PoW
+        MSK = (1 << 128) - 1
+        dist = bin(((Ai + Bj) & MSK) ^ ((Aj + Bi) & MSK)).count('1')
+        if dist <= 128 - d:
+            break
 
 
 def main():
@@ -51,6 +56,7 @@ def main():
     We will construct a block dictionary and pass this around to solving and
     submission functions.
     """
+    # TODO: Change me to your team members!
     block_contents = "staff"
     while True:
         #   Next block's parent, version, difficulty
@@ -59,8 +65,8 @@ def main():
         #   head of the main chain
         new_block = make_block(next_header, block_contents)
         #   Solve the POW
-        print "Solving block..."
-        print new_block
+        print("Solving block...")
+        print(new_block)
         solve_block(new_block)
         #   Send to the server
         add_block(new_block, block_contents)
@@ -73,7 +79,7 @@ def get_next():
            parentid        HexString
            version         single byte
     """
-    return json.loads(urllib2.urlopen(NODE_URL + "/next").read())
+    return requests.get(NODE_URL + "/next").json()
 
 
 def add_block(h, contents):
@@ -89,10 +95,13 @@ def add_block(h, contents):
             block:          string
     """
     add_block_request = {"header": h, "block": contents}
-    print "Sending block to server..."
-    print json.dumps(add_block_request)
-    r = requests.post(NODE_URL + "/add", data=json.dumps(add_block_request))
-    print r
+    print("Sending block to server...")
+    print(json.dumps(add_block_request))
+    r = requests.post(NODE_URL + "/add", json=add_block_request)
+    print(r)
+    if r.ok:
+        print("Successfully added block:")
+        print(r.json())
 
 
 def hash_block_to_hex(b):
@@ -104,20 +113,20 @@ def hash_block_to_hex(b):
     Not used for mining since it includes all 3 nonces, but serves as the unique
     identifier for a block when querying the explorer.
     """
-    packed_data = []
-    packed_data.extend(b["parentid"].decode('hex'))
-    packed_data.extend(b["root"].decode('hex'))
-    packed_data.extend(pack('>Q', long(b["difficulty"])))
-    packed_data.extend(pack('>Q', long(b["timestamp"])))
+    packed_data = bytearray()
+    packed_data.extend(bytes.fromhex(b["parentid"]))
+    packed_data.extend(bytes.fromhex(b["root"]))
+    packed_data.extend(pack('>Q', b["difficulty"]))
+    packed_data.extend(pack('>Q', b["timestamp"]))
     #   Bigendian 64bit unsigned
     for n in b["nonces"]:
         #   Bigendian 64bit unsigned
-        packed_data.extend(pack('>Q', long(n)))
-    packed_data.append(chr(b["version"]))
+        packed_data.extend(pack('>Q', n))
+    packed_data.extend(pack('>b', b["version"]))
     if len(packed_data) != 105:
-        print "invalid length of packed data"
+        print("invalid length of packed data")
     h = H()
-    h.update(''.join(packed_data))
+    h.update(packed_data)
     b["hash"] = h.digest().encode('hex')
     return b["hash"]
 
@@ -127,21 +136,21 @@ def compute_ciphers(b):
     Computes the ciphers Ai, Aj, Bi, Bj of a block header.
     """
 
-    packed_data = []
-    packed_data.extend(b["parentid"].decode('hex'))
-    packed_data.extend(b["root"].decode('hex'))
-    packed_data.extend(pack('>Q', long(b["difficulty"])))
-    packed_data.extend(pack('>Q', long(b["timestamp"])))
-    packed_data.extend(pack('>Q', long(b["nonces"][0])))
-    packed_data.append(chr(b["version"]))
+    packed_data = bytearray()
+    packed_data.extend(bytes.fromhex(b["parentid"]))
+    packed_data.extend(bytes.fromhex(b["root"]))
+    packed_data.extend(pack('>Q', b["difficulty"]))
+    packed_data.extend(pack('>Q', b["timestamp"]))
+    packed_data.extend(pack('>Q', b["nonces"][0]))
+    packed_data.extend(pack('>b', b["version"]))
     if len(packed_data) != 89:
-        print "invalid length of packed data"
+        print("invalid length of packed data")
     h = H()
-    h.update(''.join(packed_data))
+    h.update(packed_data)
     seed = h.digest()
 
     if len(seed) != 32:
-        print "invalid length of packed data"
+        print("invalid length of packed data")
     h = H()
     h.update(seed)
     seed2 = h.digest()
@@ -149,8 +158,8 @@ def compute_ciphers(b):
     A = AES.new(seed)
     B = AES.new(seed2)
 
-    i = pack('>QQ', 0, long(b["nonces"][1]))
-    j = pack('>QQ', 0, long(b["nonces"][2]))
+    i = pack('>QQ', 0, b["nonces"][1])
+    j = pack('>QQ', 0, b["nonces"][2])
 
     Ai = A.encrypt(i)
     Aj = A.encrypt(j)
@@ -169,7 +178,7 @@ def hash_to_hex(data):
     """Returns the hex-encoded hash of a byte string."""
     h = H()
     h.update(data)
-    return h.digest().encode('hex')
+    return h.hexdigest()
 
 
 def make_block(next_info, contents):
@@ -180,10 +189,10 @@ def make_block(next_info, contents):
     block = {
         "version": next_info["version"],
         #   for now, root is hash of block contents (team name)
-        "root": hash_to_hex(contents),
+        "root": hash_to_hex(contents.encode('ascii')),
         "parentid": next_info["parentid"],
         #   nanoseconds since unix epoch
-        "timestamp": long(time.time()*1000*1000*1000),
+        "timestamp": int(time.time()*1000*1000*1000),
         "difficulty": next_info["difficulty"]
     }
     return block
