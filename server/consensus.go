@@ -15,17 +15,17 @@ import (
 )
 
 const (
-	targetBlockInterval      = 10 * 60 * 1000 * 1000 * 1000      // 10 minutes
-	difficultyRetargetLength = 24 * 60 * 60 * 1000 * 1000 * 1000 // 1 day
+	targetBlockInterval      = 1 * 60 * 1000 * 1000 * 1000      // 1 minute
+	difficultyRetargetLength = 1 * 60 * 60 * 1000 * 1000 * 1000 // 1 hour
 	difficultyRetargetWindow = uint64(difficultyRetargetLength / targetBlockInterval)
-	maxClockDrift            = 2 * 60 * 1000 * 1000 * 1000 // 2 minutes
+	maxClockDrift            = 5 * 60 * 1000 * 1000 * 1000 // 5 minutes
 
 	BlockchainPath = "blockchain.db"
 
 	HeaderBucket = "HEADER-"
 	BlockBucket  = "BLOCK-"
 
-	MinimumDifficulty = uint64(2 * 10 * 1000)
+	MinimumDifficulty = uint64(2 * 100 * 1000)
 )
 
 var genesisHeader coin.Header
