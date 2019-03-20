@@ -86,6 +86,7 @@ def main():
         solve_block(new_block)
         #   Send to the server
         add_block(new_block, block_contents)
+        print()
 
 
 def get_next():
@@ -139,7 +140,7 @@ def hash_block_to_hex(b):
         #   Bigendian 64bit unsigned
         packed_data.extend(pack('>Q', n))
     for n in b["proofs"]:
-        packed_data.extend(n.to_bytes(128), byteorder='big')
+        packed_data.extend(n.to_bytes(128, byteorder='big'))
     packed_data.extend(pack('>b', b["version"]))
     if len(packed_data) != 353:
         print("invalid length of packed data")
