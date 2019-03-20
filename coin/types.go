@@ -110,7 +110,8 @@ func (z *G) Equals(g *G) bool {
 }
 
 func (g *G) Bytes() (b [GSize]byte) {
-	copy(b[:], (*big.Int)(g).Bytes())
+	buf := (*big.Int)(g).Bytes()
+	copy(b[GSize - len(buf):], buf)
 	return
 }
 

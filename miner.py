@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 import json
 from hashlib import sha256 as H
-from Crypto.Cipher import AES
-from Crypto.Random import random
 import time
 from struct import pack, unpack
 import requests
+from random import randint
 
 #NODE_URL = "http://6857coin.csail.mit.edu"
 NODE_URL = "http://localhost:8080"
@@ -25,6 +24,9 @@ NODE_URL = "http://localhost:8080"
 """
 
 
+modulus = 32420940066761377073822203008568487340520716029590695882785276948946647098540634852251945955581505518333400893165659768177465251805732877874332490491041935323641879090718180983335475999954043569989824159397343386039323761999256232745942994005221413223409039438367895101615370225200842862162707097865077364897
+
+
 def solve_block(b):
     """
     Iterate over random nonce triples until a valid proof of work is found
@@ -35,17 +37,31 @@ def solve_block(b):
 
     """
     d = b["difficulty"]
-    while True:
-        b["nonces"] = [rand_nonce() for i in range(3)]
-        #   Compute Ai, Aj, Bi, Bj
-        ciphers = compute_ciphers(b)
-        #   Parse the ciphers as big-endian unsigned integers
-        Ai, Aj, Bi, Bj = [unpack_uint128(cipher) for cipher in ciphers]
-        #   TODO: Verify PoW
-        MSK = (1 << 128) - 1
-        dist = bin(((Ai + Bj) & MSK) ^ ((Aj + Bi) & MSK)).count('1')
-        if dist <= 128 - d:
-            break
+    b["nonces"] = [0,0]
+    g = compute_g(b)
+    gt = g
+    t = 0
+    while t <= d:
+        gt = gt * gt % modulus
+        t += 1
+    gt = min(gt, modulus - gt)
+    target = compute_target(d)
+    while gt > target:
+        gt = gt * gt % modulus
+        gt = min(gt, modulus - gt)
+        t += 1
+
+    l, _ = compute_proof_params(t, g, gt)
+    q = (1 << t) // l
+    pi = pow(g, q, modulus)
+    pi = min(pi, modulus - pi)
+
+    b["nonces"][1] = t
+    b["proofs"] = [gt, pi]
+
+
+def compute_target(difficulty):
+    return modulus // 2 // difficulty
 
 
 def main():
@@ -122,17 +138,19 @@ def hash_block_to_hex(b):
     for n in b["nonces"]:
         #   Bigendian 64bit unsigned
         packed_data.extend(pack('>Q', n))
+    for n in b["proofs"]:
+        packed_data.extend(n.to_bytes(128), byteorder='big')
     packed_data.extend(pack('>b', b["version"]))
-    if len(packed_data) != 105:
+    if len(packed_data) != 353:
         print("invalid length of packed data")
     h = H()
     h.update(packed_data)
     return h.hexdigest()
 
 
-def compute_ciphers(b):
+def compute_g(b):
     """
-    Computes the ciphers Ai, Aj, Bi, Bj of a block header.
+    Computes the starting group element g
     """
 
     packed_data = bytearray()
@@ -144,33 +162,63 @@ def compute_ciphers(b):
     packed_data.extend(pack('>b', b["version"]))
     if len(packed_data) != 89:
         print("invalid length of packed data")
-    h = H()
-    h.update(packed_data)
-    seed = h.digest()
 
-    if len(seed) != 32:
-        print("invalid length of packed data")
-    h = H()
-    h.update(seed)
-    seed2 = h.digest()
+    g_bytes = bytearray()
+    for i in range(4):
+        h = H()
+        h.update(packed_data + pack('>b', i))
+        g_bytes += h.digest()
 
-    A = AES.new(seed)
-    B = AES.new(seed2)
-
-    i = pack('>QQ', 0, b["nonces"][1])
-    j = pack('>QQ', 0, b["nonces"][2])
-
-    Ai = A.encrypt(i)
-    Aj = A.encrypt(j)
-    Bi = B.encrypt(i)
-    Bj = B.encrypt(j)
-
-    return Ai, Aj, Bi, Bj
+    g = int.from_bytes(g_bytes, byteorder='big')
+    g %= modulus
+    g = min(g, modulus - g)
+    return g
 
 
-def unpack_uint128(x):
-    h, l = unpack('>QQ', x)
-    return (h << 64) + l
+def probably_prime(p):
+    q = p-1
+    s = 0
+    while q & 1 == 0:
+        q >>= 1
+        s += 1
+
+    for _ in range(10):
+        a = pow(randint(2, p-2), q, p)
+        if a == 1 or a == p-1:
+            continue
+
+        for _ in range(s-1):
+            a = a * a % p
+            if a == 1:
+                return False
+            elif a == p-1:
+                break
+        else:
+            return False
+    return True
+
+
+def compute_proof_params(t, g, gt):
+    """
+    Compute the proof parameters given t, g, and g^{2^t}
+    """
+
+    packed_data = bytearray()
+    packed_data.extend(pack('>Q', t))
+    packed_data.extend(g.to_bytes(128, byteorder='big'))
+    packed_data.extend(gt.to_bytes(128, byteorder='big'))
+
+    i = 0
+    while True:
+        h = H()
+        h.update(packed_data + pack(">Q", i))
+        l = int.from_bytes(h.digest(), byteorder='big')
+        if probably_prime(l):
+            break
+        i += 1
+
+    r = pow(2, t, l)
+    return l, r
 
 
 def hash_to_hex(data):
@@ -195,13 +243,6 @@ def make_block(next_info, contents):
         "difficulty": next_info["difficulty"]
     }
     return block
-
-
-def rand_nonce():
-    """
-    Returns a random uint64
-    """
-    return random.getrandbits(64)
 
 
 if __name__ == "__main__":

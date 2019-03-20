@@ -25,7 +25,7 @@ const (
 	HeaderBucket = "HEADER-"
 	BlockBucket  = "BLOCK-"
 
-	MinimumDifficulty = uint64(2 * 1000 * 1000)
+	MinimumDifficulty = uint64(2 * 10 * 1000)
 )
 
 var genesisHeader coin.Header
