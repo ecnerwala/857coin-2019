@@ -110,7 +110,7 @@ def hash_block_to_hex(b):
     bytes with the correct endianness and length for each arguments. Then hashes
     the concatenation of these bytes and encodes to hexidecimal.
 
-    Not used for mining since it includes all 3 nonces, but serves as the unique
+    Not used for mining since it includes all nonces, but serves as the unique
     identifier for a block when querying the explorer.
     """
     packed_data = bytearray()
@@ -127,8 +127,7 @@ def hash_block_to_hex(b):
         print("invalid length of packed data")
     h = H()
     h.update(packed_data)
-    b["hash"] = h.digest().encode('hex')
-    return b["hash"]
+    return h.hexdigest()
 
 
 def compute_ciphers(b):
