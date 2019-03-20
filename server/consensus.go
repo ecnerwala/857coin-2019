@@ -440,23 +440,19 @@ func (bc *blockchain) retargetDifficulty(header *processedHeader) error {
 	} else {
 		ratio = float64(targetBlockInterval) * float64(h - pastHeaderHeight) / float64(windowTime)
 	}
-	logRatio := math.Log2(ratio)
+	if ratio < 0 {
+		ratio = 0
+	}
 
-	log.Printf("[Difficulty] log2: %f ratio: %f time: %d interval %d\n", logRatio,
-		ratio, windowTime, targetBlockInterval)
+	log.Printf("[Difficulty] ratio: %f time: %d interval %d\n", ratio, windowTime, targetBlockInterval)
 
 	// Clamp to maximum of 4x increase/decrease
-	if logRatio > 2 {
-		header.NextDifficulty += 2
-	} else if logRatio < -2 {
-		header.NextDifficulty -= 2
-	} else if logRatio < 0 {
-		header.NextDifficulty -= uint64(-logRatio)
-	} else if logRatio > 0 {
-		header.NextDifficulty += uint64(logRatio)
-	} else {
-		// 0 or NaN, just no-op
+	if ratio > 2 {
+		ratio = 2
+	} else if ratio < 0.5 {
+		ratio = 0.5
 	}
+	header.NextDifficulty = uint64(float64(header.NextDifficulty) * ratio)
 
 	// Ensure at minimum
 	if header.NextDifficulty < MinimumDifficulty {
