@@ -40,7 +40,7 @@ def solve_block(b):
     b["nonces"][0] = 0  # arbitrary
 
     g = compute_g(b)
-    target = compute_target(d)
+    target = modulus // 2 // d
 
     gt = g
     t = 0
@@ -60,8 +60,81 @@ def solve_block(b):
     b["proofs"] = [gt, pi]
 
 
-def compute_target(difficulty):
-    return modulus // 2 // difficulty
+def compute_g(b):
+    """
+    Computes the starting group element g
+    """
+
+    packed_data = bytearray()
+    packed_data.extend(bytes.fromhex(b["parentid"]))
+    packed_data.extend(bytes.fromhex(b["root"]))
+    packed_data.extend(pack('>Q', b["difficulty"]))
+    packed_data.extend(pack('>Q', b["timestamp"]))
+    packed_data.extend(pack('>Q', b["nonces"][0]))
+    packed_data.extend(pack('>b', b["version"]))
+    if len(packed_data) != 89:
+        print("invalid length of packed data")
+
+    g_bytes = bytearray()
+    for i in range(4):
+        h = H()
+        h.update(packed_data + pack('>b', i))
+        g_bytes += h.digest()
+
+    g = int.from_bytes(g_bytes, byteorder='big')
+    g %= modulus
+    g = min(g, modulus - g)
+    return g
+
+
+def probably_prime(p):
+    """
+    Checks if an element is probably prime.
+
+    Uses 10 iterations of the Miller-Rabin primality test
+    """
+    q = p-1
+    s = 0
+    while q & 1 == 0:
+        q >>= 1
+        s += 1
+
+    for _ in range(10):
+        a = pow(randint(2, p-2), q, p)
+        if a == 1 or a == p-1:
+            continue
+
+        for _ in range(s-1):
+            a = a * a % p
+            if a == 1:
+                return False
+            elif a == p-1:
+                break
+        else:
+            return False
+    return True
+
+
+def compute_proof_challenge(t, g, gt):
+    """
+    Compute the proof challenge prime l given t, g, and g^{2^t}
+    """
+
+    packed_data = bytearray()
+    packed_data.extend(pack('>Q', t))
+    packed_data.extend(g.to_bytes(128, byteorder='big'))
+    packed_data.extend(gt.to_bytes(128, byteorder='big'))
+
+    i = 0
+    while True:
+        h = H()
+        h.update(packed_data + pack(">Q", i))
+        l = int.from_bytes(h.digest(), byteorder='big')
+        if probably_prime(l):
+            break
+        i += 1
+
+    return l
 
 
 def main():
@@ -121,6 +194,32 @@ def add_block(h, contents):
         print(r.json())
 
 
+def make_block(next_info, contents):
+    """
+    Constructs a block from /next header information `next_info` and sepcified
+    contents.
+    """
+    block = {
+        "version": next_info["version"],
+        #   for now, root is hash of block contents (team name)
+        "root": hash_data_to_hex(contents.encode('ascii')),
+        "parentid": next_info["parentid"],
+        #   nanoseconds since unix epoch
+        "timestamp": int(time.time()*1000*1000*1000),
+        "difficulty": next_info["difficulty"],
+        "nonces": [0, 0],
+        "proofs": [0, 0],
+    }
+    return block
+
+
+def hash_data_to_hex(data):
+    """Returns the hex-encoded hash of a byte string."""
+    h = H()
+    h.update(data)
+    return h.hexdigest()
+
+
 def hash_block_to_hex(b):
     """
     Computes the hex-encoded hash of a block header. First builds an array of
@@ -147,104 +246,6 @@ def hash_block_to_hex(b):
     h = H()
     h.update(packed_data)
     return h.hexdigest()
-
-
-def compute_g(b):
-    """
-    Computes the starting group element g
-    """
-
-    packed_data = bytearray()
-    packed_data.extend(bytes.fromhex(b["parentid"]))
-    packed_data.extend(bytes.fromhex(b["root"]))
-    packed_data.extend(pack('>Q', b["difficulty"]))
-    packed_data.extend(pack('>Q', b["timestamp"]))
-    packed_data.extend(pack('>Q', b["nonces"][0]))
-    packed_data.extend(pack('>b', b["version"]))
-    if len(packed_data) != 89:
-        print("invalid length of packed data")
-
-    g_bytes = bytearray()
-    for i in range(4):
-        h = H()
-        h.update(packed_data + pack('>b', i))
-        g_bytes += h.digest()
-
-    g = int.from_bytes(g_bytes, byteorder='big')
-    g %= modulus
-    g = min(g, modulus - g)
-    return g
-
-
-def probably_prime(p):
-    q = p-1
-    s = 0
-    while q & 1 == 0:
-        q >>= 1
-        s += 1
-
-    for _ in range(10):
-        a = pow(randint(2, p-2), q, p)
-        if a == 1 or a == p-1:
-            continue
-
-        for _ in range(s-1):
-            a = a * a % p
-            if a == 1:
-                return False
-            elif a == p-1:
-                break
-        else:
-            return False
-    return True
-
-
-def compute_proof_challenge(t, g, gt):
-    """
-    Compute the proof challenge prime l given t, g, and g^{2^t}
-    """
-
-    packed_data = bytearray()
-    packed_data.extend(pack('>Q', t))
-    packed_data.extend(g.to_bytes(128, byteorder='big'))
-    packed_data.extend(gt.to_bytes(128, byteorder='big'))
-
-    i = 0
-    while True:
-        h = H()
-        h.update(packed_data + pack(">Q", i))
-        l = int.from_bytes(h.digest(), byteorder='big')
-        if probably_prime(l):
-            break
-        i += 1
-
-    return l
-
-
-def hash_to_hex(data):
-    """Returns the hex-encoded hash of a byte string."""
-    h = H()
-    h.update(data)
-    return h.hexdigest()
-
-
-def make_block(next_info, contents):
-    """
-    Constructs a block from /next header information `next_info` and sepcified
-    contents.
-    """
-    block = {
-        "version": next_info["version"],
-        #   for now, root is hash of block contents (team name)
-        "root": hash_to_hex(contents.encode('ascii')),
-        "parentid": next_info["parentid"],
-        #   nanoseconds since unix epoch
-        "timestamp": int(time.time()*1000*1000*1000),
-        "difficulty": next_info["difficulty"],
-        "nonces": [0, 0],
-        "proofs": [0, 0],
-    }
-    return block
 
 
 if __name__ == "__main__":
