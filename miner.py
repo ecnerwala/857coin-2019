@@ -37,22 +37,22 @@ def solve_block(b):
 
     """
     d = b["difficulty"]
-    b["nonces"] = [0,0]
+    b["nonces"][0] = 0  # arbitrary
+
     g = compute_g(b)
+    target = compute_target(d)
+
     gt = g
     t = 0
-    while t <= d:
-        gt = gt * gt % modulus
-        t += 1
-    gt = min(gt, modulus - gt)
-    target = compute_target(d)
-    while gt > target:
+
+    while not (t > d and gt <= target):
         gt = gt * gt % modulus
         gt = min(gt, modulus - gt)
         t += 1
 
-    l, _ = compute_proof_params(t, g, gt)
+    l = compute_proof_challenge(t, g, gt)
     q = (1 << t) // l
+
     pi = pow(g, q, modulus)
     pi = min(pi, modulus - pi)
 
@@ -199,9 +199,9 @@ def probably_prime(p):
     return True
 
 
-def compute_proof_params(t, g, gt):
+def compute_proof_challenge(t, g, gt):
     """
-    Compute the proof parameters given t, g, and g^{2^t}
+    Compute the proof challenge prime l given t, g, and g^{2^t}
     """
 
     packed_data = bytearray()
@@ -218,8 +218,7 @@ def compute_proof_params(t, g, gt):
             break
         i += 1
 
-    r = pow(2, t, l)
-    return l, r
+    return l
 
 
 def hash_to_hex(data):
@@ -241,7 +240,9 @@ def make_block(next_info, contents):
         "parentid": next_info["parentid"],
         #   nanoseconds since unix epoch
         "timestamp": int(time.time()*1000*1000*1000),
-        "difficulty": next_info["difficulty"]
+        "difficulty": next_info["difficulty"],
+        "nonces": [0, 0],
+        "proofs": [0, 0],
     }
     return block
 

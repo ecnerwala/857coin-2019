@@ -196,7 +196,7 @@ func (h *Header) computeG() *G {
 	return new(G).SetBytes(buf).Cannonize()
 }
 
-func computeLAndR(t uint64, g, gt *G) (*big.Int, *big.Int) {
+func computeL(t uint64, g, gt *G) *big.Int {
 	b := make([]byte, 8+GSize+GSize+8)
 	offset := 0
 
@@ -220,9 +220,7 @@ func computeLAndR(t uint64, g, gt *G) (*big.Int, *big.Int) {
 		}
 	}
 
-	r := new(big.Int).Exp(bigTwo, new(big.Int).SetUint64(t), l)
-
-	return l, r
+	return l
 }
 
 func (h *Header) Valid(b Block) error {
@@ -265,7 +263,9 @@ func (h *Header) validPoW() error {
 
 	g := h.computeG()
 
-	l, r := computeLAndR(t, g, gt)
+	l := computeL(t, g, gt)
+
+	r := new(big.Int).Exp(bigTwo, new(big.Int).SetUint64(t), l)
 
 	test := new(G).Mul(new(G).Exp(pi, l), new(G).Exp(g, r))
 	if !test.Equals(gt) {
@@ -309,7 +309,7 @@ func (h *Header) MineBlock(b Block) {
 		t ++
 	}
 
-	l, _ := computeLAndR(t, g, gt)
+	l := computeL(t, g, gt)
 	q := new(big.Int).Exp(bigTwo, new(big.Int).SetUint64(t), nil)
 	q.Div(q, l)
 	pi := new(G).Exp(g, q)
