@@ -93,8 +93,8 @@ computed $g^{2^T}$ without recomputing it yourself. We remedy this by attaching
 a "proof" to the VDF.
 
 Let $h$ be the claimed value of $g^{2^T}$. Then, we will
-pseudorandomly generate a challenge prime $l = H(T, g, h)$ using some hash
-function $H$ (described later). Let $q = \lfloor 2^T/l \rfloor$ and $r = 2^T \
+pseudorandomly generate a challenge prime $l = Hash(T, g, h)$ using some hash
+function (described later). Let $q = \lfloor 2^T/l \rfloor$ and $r = 2^T \
 \mod l$. Then, the miner must also compute and attach $\pi = g^q$ as a proof, so
 that a verifier can validate that $h = \pi^l g^r$. (The unforgeability of this
 proof relies on some Diffie-Hellman-like assumptions, which you can find in the
@@ -145,13 +145,13 @@ Then, the proof-of-work at difficulty $d$ must satisfy:
 
 * $1 \le h \le N/2$ and $1 \le \pi \le N/2$ (they are elements of $G^\pm$)
 * $h = g^{2^T}$; the verifier will check this using the proof $\pi$, i.e.\ check
-  that $h = g^r \pi^l$ for challenge $l = H(T, g, h)$ and $r = 2^T \ \mod l$
+  that $h = g^r \pi^l$ for challenge $l = Hash(T, g, h)$ and $r = 2^T \ \mod l$
   (see below).
 * $T > d$ and $h \le |G^\pm|/d = N/(2d)$; together, these force each miner to
   square at least $d$ times, and then $d$ more in expectation to find a valid
   $h$.
 
-We will generate the challenge $l$ as follows: repeatedly generate potential
+The challenge $l$ is generated as follows: repeatedly generate potential
 challenges until we find a prime value. In the $i$th round (0-indexed),
 concatenate the following data:
 
@@ -164,9 +164,10 @@ In other words:
 
 >      l_candidate[i] = SHA256(Bytes(T) + Bytes(g) + Bytes(h) + i)
 
-We take $l$ to be the first `l_candidate[i]` which is prime, and compute $q =
-\lfloor 2^T / l \rfloor$ and $r = 2^T \ \mod l$. A miner should compute $\pi =
-g^q$ to satisfy the proof.
+We take $l$ to be the first `l_candidate[i]` which is prime. Then, the miner or
+verifier can compute $q = \lfloor 2^T / l \rfloor$ and $r = 2^T \ \mod l$. A
+miner should compute $\pi = g^q$ to satisfy the proof, and a verifier checks
+that $h = \pi^l g^r$.
 
 For a block B to be accepted into the blockchain, the following must
 additionally be true:
