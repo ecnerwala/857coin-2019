@@ -26,6 +26,14 @@ Get a template for the next header to mine (as JSON):
 
 > [/next](/next)
 
+Get a template for a header to mine on top of a given block (as JSON):
+
+>     /next/<hash>
+>
+> Example: get a template to mine on top of the genesis block:
+>
+> [/next/18be4005f813360c14a360ab2ca468772e9ff39e684fea89294aeb9df0c7d85e](/next/18be4005f813360c14a360ab2ca468772e9ff39e684fea89294aeb9df0c7d85e)
+
 Add a block to the blockchain:
 
 >     POST /add HTTP/1.1

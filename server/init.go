@@ -56,7 +56,7 @@ func Start(addr string) error {
 
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/add", addHandler)
-	http.HandleFunc("/next", nextHandler)
+	http.Handle("/next/", http.StripPrefix("/next/", http.HandlerFunc(nextHandler)))
 	http.HandleFunc("/head", headHandler)
 	http.HandleFunc("/scores", scoresHandler)
 	http.Handle("/search/", http.StripPrefix("/search/", http.HandlerFunc(searchHandler)))

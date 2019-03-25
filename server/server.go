@@ -72,14 +72,30 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func nextHandler(w http.ResponseWriter, r *http.Request) {
-	bchain.Lock()
-	head := bchain.head
-	diff := bchain.currDifficulty
-	bchain.Unlock()
+	var head *processedHeader
+	if r.URL.Path == "" {
+		bchain.Lock()
+		head = &bchain.head
+		bchain.Unlock()
+	} else {
+		hsh, err := coin.NewHash(r.URL.Path)
+		if err != nil {
+			httpError(w, http.StatusBadRequest, "error reading hash: %s", err)
+			return
+		}
+		bchain.Lock()
+		head, err = bchain.getHeader(hsh)
+		if err != nil {
+			bchain.Unlock()
+			httpError(w, http.StatusNotFound, "header not found: %x", hsh[:])
+			return
+		}
+		bchain.Unlock()
+	}
 
 	nextHeader := coin.Header{
 		ParentID:   head.Header.Sum(),
-		Difficulty: diff,
+		Difficulty: head.NextDifficulty,
 		Version:    0x00,
 	}
 
