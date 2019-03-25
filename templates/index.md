@@ -20,7 +20,7 @@ Get information about a block (as JSON):
 >
 > Example: get information about the genesis block:
 >
-> [/block/d127746e056fa60278353a19ba090b04c021855e56e136c915778eff1f5afdfa](/block/d127746e056fa60278353a19ba090b04c021855e56e136c915778eff1f5afdfa)
+> [/block/18be4005f813360c14a360ab2ca468772e9ff39e684fea89294aeb9df0c7d85e](/block/18be4005f813360c14a360ab2ca468772e9ff39e684fea89294aeb9df0c7d85e)
 
 Get a template for the next header to mine (as JSON):
 

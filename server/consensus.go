@@ -109,7 +109,7 @@ func (bc *blockchain) mineGenesisBlock() error {
 
 	genesisHeader = coin.Header{
 		Difficulty: MinimumDifficulty,
-		Timestamp:  time.Now().UnixNano(),
+		Timestamp:  0,
 	}
 	genesisHeader.MineBlock(b)
 
@@ -200,9 +200,11 @@ func (bc *blockchain) AddBlock(h coin.Header, b coin.Block) (*processedHeader, e
 	}
 
 	// Check that timestamp is within 2 minutes of now
-	diff := int64(h.Timestamp) - time.Now().UnixNano()
-	if diff > maxClockDrift || diff < -maxClockDrift {
-		return nil, ErrClockDrift
+	if h.ParentID != (coin.Hash{}) {
+		diff := int64(h.Timestamp) - time.Now().UnixNano()
+		if diff > maxClockDrift || diff < -maxClockDrift {
+			return nil, ErrClockDrift
+		}
 	}
 
 	// Only process valid blocks
