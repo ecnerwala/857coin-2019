@@ -192,3 +192,16 @@ The target block interval is 1 minute. Difficulty will be retargeted every 60 bl
 * You may use GPUs, FPGAs, ASICs, etc.
 * Do not abuse MIT resources to mine blocks.
 * Limit the number of requests you send to the server to 4 requests per minute.
+
+## Tips for Mining
+
+* The target block interval is 1 minute, so it's calibrated so that *some
+  person* mines *one block* in a minute. Don't give up if your program doesn't
+  finish in 10 seconds!
+* You may want to speed up your arithmetic. Python big integers are decently
+  efficient, but they're not perfect. The gold standard library is GMP, which
+  you can call in Python using [`gmpy2`](https://pypi.org/project/gmpy2/).
+* The papers describing the VDF have some optimizations for parallelizing the
+  VDF proof (computing $\pi$).
+* Experiment! Some things may work better than others, and sometimes you just
+  have to try it!

@@ -142,5 +142,12 @@ seed = min(seed_integer % N, N - seed_integer % N)</code></pre>
 <li>Do not abuse MIT resources to mine blocks.</li>
 <li>Limit the number of requests you send to the server to 4 requests per minute.</li>
 </ul>
+<h2 id="tips-for-mining">Tips for Mining</h2>
+<ul>
+<li>The target block interval is 1 minute, so it’s calibrated so that <em>some person</em> mines <em>one block</em> in a minute. Don’t give up if your program doesn’t finish in 10 seconds!</li>
+<li>You may want to speed up your arithmetic. Python big integers are decently efficient, but they’re not perfect. The gold standard library is GMP, which you can call in Python using <a href="https://pypi.org/project/gmpy2/"><code>gmpy2</code></a>.</li>
+<li>The papers describing the VDF have some optimizations for parallelizing the VDF proof (computing <span class="math inline"><em>π</em></span>).</li>
+<li>Experiment! Some things may work better than others, and sometimes you just have to try it!</li>
+</ul>
 </body>
 </html>
