@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-from hashlib import sha256 as H
+from hashlib import sha256
 import time
 from struct import pack, unpack
 import requests
@@ -24,7 +24,7 @@ NODE_URL = "http://localhost:8080"
 """
 
 
-modulus = 32420940066761377073822203008568487340520716029590695882785276948946647098540634852251945955581505518333400893165659768177465251805732877874332490491041935323641879090718180983335475999954043569989824159397343386039323761999256232745942994005221413223409039438367895101615370225200842862162707097865077364897
+N = 32420940066761377073822203008568487340520716029590695882785276948946647098540634852251945955581505518333400893165659768177465251805732877874332490491041935323641879090718180983335475999954043569989824159397343386039323761999256232745942994005221413223409039438367895101615370225200842862162707097865077364897
 
 
 def solve_block(b):
@@ -40,24 +40,24 @@ def solve_block(b):
     b["nonces"][0] = 0  # arbitrary
 
     g = compute_g(b)
-    target = modulus // 2 // d
+    target = N // 2 // d
 
-    gt = g
+    h = g
     t = 0
 
-    while not (t > d and gt <= target):
-        gt = gt * gt % modulus
-        gt = min(gt, modulus - gt)
+    while not (t > d and h <= target):
+        h = h * h % N
+        h = min(h, N - h)
         t += 1
 
-    l = compute_proof_challenge(t, g, gt)
+    l = compute_proof_challenge(t, g, h)
     q = (1 << t) // l
 
-    pi = pow(g, q, modulus)
-    pi = min(pi, modulus - pi)
+    pi = pow(g, q, N)
+    pi = min(pi, N - pi)
 
     b["nonces"][1] = t
-    b["proofs"] = [gt, pi]
+    b["proofs"] = [h, pi]
 
 
 def compute_g(b):
@@ -77,13 +77,13 @@ def compute_g(b):
 
     g_bytes = bytearray()
     for i in range(4):
-        h = H()
-        h.update(packed_data + pack('>b', i))
-        g_bytes += h.digest()
+        hsh = sha256()
+        hsh.update(packed_data + pack('>b', i))
+        g_bytes += hsh.digest()
 
     g = int.from_bytes(g_bytes, byteorder='big')
-    g %= modulus
-    g = min(g, modulus - g)
+    g %= N
+    g = min(g, N - g)
     return g
 
 
@@ -115,21 +115,21 @@ def probably_prime(p):
     return True
 
 
-def compute_proof_challenge(t, g, gt):
+def compute_proof_challenge(t, g, h):
     """
-    Compute the proof challenge prime l given t, g, and g^{2^t}
+    Compute the proof challenge prime l given t, g, and h = g^{2^t}
     """
 
     packed_data = bytearray()
     packed_data.extend(pack('>Q', t))
     packed_data.extend(g.to_bytes(128, byteorder='big'))
-    packed_data.extend(gt.to_bytes(128, byteorder='big'))
+    packed_data.extend(h.to_bytes(128, byteorder='big'))
 
     i = 0
     while True:
-        h = H()
-        h.update(packed_data + pack(">Q", i))
-        l = int.from_bytes(h.digest(), byteorder='big')
+        hsh = sha256()
+        hsh.update(packed_data + pack(">Q", i))
+        l = int.from_bytes(hsh.digest(), byteorder='big')
         if probably_prime(l):
             break
         i += 1
@@ -215,9 +215,9 @@ def make_block(next_info, contents):
 
 def hash_data_to_hex(data):
     """Returns the hex-encoded hash of a byte string."""
-    h = H()
-    h.update(data)
-    return h.hexdigest()
+    hsh = sha256()
+    hsh.update(data)
+    return hsh.hexdigest()
 
 
 def hash_block_to_hex(b):
@@ -243,9 +243,9 @@ def hash_block_to_hex(b):
     packed_data.extend(pack('>b', b["version"]))
     if len(packed_data) != 353:
         print("invalid length of packed data")
-    h = H()
-    h.update(packed_data)
-    return h.hexdigest()
+    hsh = sha256()
+    hsh.update(packed_data)
+    return hsh.hexdigest()
 
 
 if __name__ == "__main__":
