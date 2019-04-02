@@ -114,7 +114,7 @@ func (e *explorer) executeTemplate() ([]byte, error) {
 		}
 
 		fmt.Fprintf(nodes, "{id:'%x',level:%d,label:'%s',color:'%s'},\n",
-			hash[:], pheader.BlockHeight, label, color)
+			hash[:], pheader.BlockHeight, template.JSEscapeString(label), color)
 		fmt.Fprintf(edges, "{from:'%s',to:'%x',color:'%s'},\n",
 			parentID, hash[:], color)
 	}
